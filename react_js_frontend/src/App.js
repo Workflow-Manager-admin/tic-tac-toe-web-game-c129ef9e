@@ -1,47 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
+import React, { useState } from 'react';
 import './App.css';
+import Board from './components/Board';
+import { calculateWinner, getComputerMove } from './utils/gameLogic';
 
-// PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
+  const [squares, setSquares] = useState(Array(9).fill(null));
+  const [isComputerOpponent, setIsComputerOpponent] = useState(true);
+  const [xIsNext, setXIsNext] = useState(true);
 
-  // Effect to apply theme to document element
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+  const handleClick = (i) => {
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
 
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+    const newSquares = squares.slice();
+    newSquares[i] = xIsNext ? 'X' : 'O';
+    setSquares(newSquares);
+    setXIsNext(!xIsNext);
+
+    // Computer's turn
+    if (isComputerOpponent && !xIsNext) {
+      setTimeout(() => {
+        const computerMove = getComputerMove(newSquares);
+        if (computerMove !== null) {
+          const nextSquares = newSquares.slice();
+          nextSquares[computerMove] = 'O';
+          setSquares(nextSquares);
+          setXIsNext(true);
+        }
+      }, 500);
+    }
   };
+
+  const resetGame = () => {
+    setSquares(Array(9).fill(null));
+    setXIsNext(true);
+  };
+
+  const toggleOpponent = () => {
+    setIsComputerOpponent(!isComputerOpponent);
+    resetGame();
+  };
+
+  const winner = calculateWinner(squares);
+  const isDraw = !winner && squares.every(square => square !== null);
+  
+  let status;
+  if (winner) {
+    status = <span className="win-message">Winner: {winner}</span>;
+  } else if (isDraw) {
+    status = <span className="win-message">Draw!</span>;
+  } else {
+    status = `Next player: ${xIsNext ? 'X' : 'O'}`;
+    if (isComputerOpponent && !xIsNext) {
+      status = 'Computer thinking...';
+    }
+  }
 
   return (
     <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <h1 className="game-title">Tic Tac Toe</h1>
+      <div className="game-container">
+        <div className="game-status">{status}</div>
+        <Board squares={squares} onSquareClick={handleClick} />
+        <div className="game-controls">
+          <button 
+            className="control-button primary-button" 
+            onClick={toggleOpponent}
+          >
+            {isComputerOpponent ? 'Play vs Friend' : 'Play vs Computer'}
+          </button>
+          <button 
+            className="control-button accent-button" 
+            onClick={resetGame}
+          >
+            Reset Game
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
